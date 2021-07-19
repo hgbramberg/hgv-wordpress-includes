@@ -1,0 +1,172 @@
+<script src="https://hgverwaltung.ch/polyfill/v2/polyfill.min.js?features=fetch"></script>
+<script src="https://hgverwaltung.ch/static/list-1.5.min.js"></script>
+<script src="https://hgverwaltung.ch/static/hgutil-1.1.js"></script>
+ 
+<style>
+    body,
+    #hg_teamSelect {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    }
+ 
+    .rowSpieler h6 {
+        font-size: 18px;
+        margin-top: 2px;
+        margin-left: 10px;
+        margin-bottom: 0px;
+        margin-right: 0px;
+    }
+ 
+    .rowSpieler h6 .jahrgang {
+        font-size: 14px;
+    }
+ 
+    .rowSpieler {
+        margin-top: 10px;
+        margin-left: 5px;
+        padding-bottom: 10px;
+        display: flex;
+        flex-direction: row;
+        border-bottom: 1px dashed #ccc;
+    }
+ 
+    .rowSpieler img {
+        align-self: flex-end;
+        width: 100px;
+    }
+ 
+    .rowSpieler .info {
+        align-self: flex-start;
+    }
+ 
+    .info .detail {
+        font-size: 14px;
+        display: flex;
+        margin-top: 8px;
+        margin-left: 10px;
+    }
+ 
+    .info .col {
+        margin-right: 50px;
+    }
+ 
+    .coldetail {
+        display: inline-block;
+        color: #777;
+        width: 110px;
+    }
+</style>
+ 
+<div id="spielerListe">
+    <div class="list"></div>
+</div>
+ 
+<script>
+    (function () {
+        club = 'bramberg';
+        
+        var template = [];
+        template.push('<div class="rowSpieler">');
+        template.push(' <img class="foto" src="">');
+        template.push(' <div class="info">');
+        template.push('   <h6><span class="nachname"></span>&nbsp;<span class="vorname"></span>&nbsp;<span class="jahrgang"></span></h6>');
+        template.push('   <div class="detail">');
+        template.push('     <div class="col">');
+        template.push('        <span class="coldetail" style="width: 200px;">Position:</span><br><b class="position"></b>');
+        template.push('        <br>');
+        template.push('        <span class="coldetail" style="width: 200px;">Funktionen:</span><br><b class="funktionen"></b>');
+        template.push('     </div>');
+        template.push('     <div class="col">');
+        template.push('        <span class="coldetail" style="width: 90px;">Ehrenmitglied:</span><br><b class="ehrenmitglied"></b>');
+        template.push('        <br>');
+        template.push('        <span class="coldetail" style="width: 90px;">Vorstand:</span><br><b class="vorstand"></b>');
+        template.push('        <br>');
+        template.push('        <span class="coldetail" style="width: 90px;">Schiedsrichter:</span><br><b class="schiedsrichter"></b>');
+        template.push('     </div>');
+        template.push('     <div class="col">');
+        template.push('        <span class="coldetail" style="width: 90px;">Fremdspieler:</span><br><b class="fremdspieler"></b>');
+        template.push('        <br>');
+        template.push('        <span class="coldetail" style="width: 90px;">Aufgestellt:</span><br><b class="aufgestellt"></b>');
+        template.push('     </div>');        
+        template.push('   </div>');
+        template.push(' </div>');
+        template.push('</div>');
+        var options = {
+            valueNames: ['nachname', 'vorname', 'jahrgang', 'position', 'funktionen',
+                'ehrenmitglied', 'vorstand', 'schiedsrichter', 'fremdspieler', 'aufgestellt',
+                { attr: 'src', name: 'foto' }],
+            item: template.join('')
+        };
+ 
+        var dataList = new List('spielerListe', options);
+ getData();
+      
+        function getData() {
+          
+            
+                var url = 'https://www.hgverwaltung.ch/api/1/' + club + '/spieler?inklDetail=true&aufgestellteSpieler=false';
+                fetch(url).then(function (response) {
+                    return response.json();
+                }).then(function (results) {
+                    showData(results);
+                });
+           
+        }
+ 
+        function showData(results) {
+            dataList.clear();
+            if (results.length === 0) {
+                document.getElementById('spielerListe').style.display = 'none';
+                return;
+            }
+            document.getElementById('spielerListe').style.display = '';
+ 
+            // Filter Ersatz und Unfall
+			results = results.filter( (result) => result.nachname != 'Ersatz' );
+			results = results.filter( (result) => result.nachname != 'Unfall' );
+			
+			results.forEach(function (row) {
+                if (row.funktionen) {
+                    row.funktionen = row.funktionen.replace(/, /g, '<br>');
+                }
+                 
+                if (row.foto) {
+                    row.foto = 'https://www.hgverwaltung.ch/api/1/' + club + '/spielerfoto/' + row.foto;
+                }
+                else {
+                    row.foto = 'data:image/gif;base64,R0lGODlhlgCiAOfzAAABAAACAAEEAAIFAQQHAgUIBAcJBQgLBwoMCAsNCgwPCw4QDA8RDRASDxETEBIUERMUEhQVExUWFBYYFRcYFhgZFxkbGBocGRscGhwdGx0fHB4fHR8gHiAhHyEjICIkISMkIiQlIyUnJCYoJScoJigpJykrKCosKSstKiwtKy0uLC4vLS8xLjAyLzEzMDIzMTM0MjQ2MzU3NDY4NTc5Njg5Nzk6ODo7OTs9Ojw+Oz0/PD5APT9APkBBP0FCQEFDQUNFQkRGQ0VHREZIRUdJRkhJR0lKSEpLSUpMSkxOS01PTE5QTU9RTlBST1FTUFJUUVNUUlRVU1VWVFZXVVZYVVdZVllbWFpcWVtdWlxeW11fXF5gXV9hXmBiX2FjYGJkYWNlYmRlY2VmZGZnZWdoZmhpZ2hqZ2lraGpsaWttamxua21vbG5wbW9xbnFzcHJ0cXN1cnR2c3V3dHZ4dXd5dnh6d3l7eHp8eXt9enx+e31/fH6AfX+BfoCCf4GDgIKEgYOFgoSGg4WHhIaIhYeJhoiKh4mLiIqMiYuNioyOi42PjI6QjY+RjpCSj5GTkJKUkZOVkpSWk5WXlJaYlZeZlpial5qbmJudmZyem52fnJ6gnZ+hnqCin6GjoKKkoaOloqSmo6WnpKaopaeppqiqp6mrqKqsqautqqyuq62vrK6wrbCyrrGzr7K0sbO1srS2s7W3tLa4tbe5tri6t7m7uLq8ubu9ury+u72/vL7BvcDCvsHDv8LEwcPFwsTGw8XHxMbIxcfJxsjKx8nLyMrMycvOys3Py87QzM/RztDSz9HT0NLU0dPV0tTW09XX1NbY1dja1tnb19rc2dvd2tze293f3N7g3d/h3uDi3+Hk4OPl4eTm4+Xn5Obo5efp5ujq5+nr6Ors6evu6u3v6+7w7e/x7vDy7/Hz8PL08fP18vT38/b49Pf59vj69/n7+Pr8+fv9+vz/+/7//P///////////////////////////////////////////////////yH+EUNyZWF0ZWQgd2l0aCBHSU1QACH5BAEKAP8ALAAAAACWAKIAAAj+AOUJHEiwoMGDCBMqXMiwocOHECNKnEixosWLGDNq3Mixo8ePFt8Ra2XLVitqA6+da/cOpMuXG9tRC3bQ3S8qAQKIoSlPG5QFAcowg0m06ENoUm4IIZUwW4AY5AqeOaMwHapU6YxqfVkuGxot7hJ2C5CjXME3cBK+WtAghoFA8tRtnTvRWKQrW7oVXObjXEJrAXSYIwgvDSCEyxjQgCePGQgCXuhKfqhoDYQAJnQR7EZDL0JmAYLIHQjvTCKEmQJ8GugsAKzJsBsCy4mgz0B3R3olvBagSDvCaCwh1BRAxMBzTJzFXq5QwREEAY5EleenTUJhAYiwI+gOi/CDzDb+BBiy/dwdbQjhqVMXljldIaJmlQggY5e8WjIS+gqQpOVAdk+UktAnBEQnjkLlENKCD2Yo495ciqAhzzVbBLDAHuw0MJ1B2PmADkHp+GCLQqfkJMOGBi1BQCHDPFLCMA9iVMoVfAym0DE2DAYPHzmJcUIoCJ0TQArZEDQOCw4alEs1AqViQAAqtFcQNdGN9okCSfwSo0TmlKLCBdBl4I1C3cBgzUC4aJBTFwmVEYAk28kTDhw3mGUQEbEMNIoBBoxyEC0BsOCZPBKwsGVErPiQQizd6AJDAFwohE4QIw5kzRIBZJAQOlUE0EMVTIzgg3IHEYAJQTwE4EdNBUoy0AP+sxzqkDYo5JTGQKoEcMJCbOxR0DuUBKAlQu0wIwsjnkST1UGsQHmgQDcYwApCieR0YDZHyDrrMaUY0EA0AgFDABsLjaICO+sUVM1QF1miSBIfLNILGwZkW9A5Y67jQgAoKPROOIxpW5AYAXTRkiIQfJjQOXoEEIYpAX8kyxc7NBGJlAP9sYlAtkBnRkLlnIGIwAWxo0AAtDQSAAJqfJMQM5EEEw2KIKXjX0HlUADMQGME0AG4CHXrw5kkCzRJTktQUWAAVgAMz80xMkGAKgN5Y2EuCImTQ3EmHFO0POeYEMAq8lizBgg5ZaEGHR5RUwzQETs0ThVR8FBkTwFQkKT+QXAEcIE8t5SgiF8ke0KABGOWbUkNBjiCnkPuLJOKH8Ig5I4dFeDQAhGf1LEsROucQUIgmNAQwK0HWRKAAb4IVM0VPBAt8AwBrEFQO4Q3VIsCfCLgSpwGqZxLO+akEVpFxwgxQQt+HuTLk4rcHoMVGBN1Ti9axKBDGa7kbtAuFpZyymgS9RGAEAp1UEO6AjGBfkHe0AIIIrPcPRE4tU7AiJTw9CDLVt0YAgrIwIXLhIYYCdFBoDQRN4Ogo3oDQQUBQKAQCSBgWPIghhEK8ogNECAKdKhCDvQgDztBpG8iwIUPrGANauTpVFphhxPwQA54uMMbf8hJBXZmkGUgYBD+NkJIMK6QBe8RRBgSIIBCnrCyTgjkHKIgiBkCAAFd/MYd30hCDDYANYbIIgAEAFc76qCADmhmLrTIwecEcgqgtCBxBCkF0GrSCRIEwAUK0QbaZGeQbIiNaeAoiCYIQICNEaQcG0gBadh3EG9YIRNP+o5AWGA7uvhgDgdpxZMyERFoKKILUFKIO1YwNoVkowk52YArBkKOGwTgBQZ5BxjqMBBxdKF1CAHGCwJwg8+lQwZGNIoB2HYQUARACRPphgEYoJuE+CAAhVgIOzoBHQS8QiDReBJTDGIHWsTRAGro4kDKoQcEnDEuczwIO+zXkdAEEUQ2IAFDjkGE3xBECAH+SEtCwhCUgsDDZcHQpzyi0YEA8OA3gDJAkDAmiZxQ4H8IMYUBOOGQdxwBGh8xHSoOAo89eEBSmwCBB3wQt1sEYAbPSp1BC5INLcgDFTUgSDH4hZ5Y0Kch2shJK+ThoGg0UCDH0MATLJGGKLDTIIjIwBo1wogASIAnBeEDEV6GAyUQwxyKaEZBPCAsg3ynF0/xnhSixwkEsEse4AiADbazn5gyZGtiIMgatvA4+JGBAHhwWUImYYEALMGeG/lGCALQAB7e5gimQEgoIGAJcQ6kqVu41w4EYrUKMIMcw8jDCQKAtUUQNhLegAYOAnAKgVxDAgpdSLUkcFZ5rCMDFdj+ZkHcMY6fEoQIOZEDD6LZEVUABQGjEMdv1KGIHgSTHGvIJ0FEYRuCWONJwJPHLz4gj3Y0i08GuIAN0tCIsJzCF5ooAQIM8AIMvgMNAZDkQIJYjQ8EYAwF2Y8BQBBXiFTjUQp4xEBDcNSMvCIFOTEBF+SgAyH0NxxvSMPJijGQbHrtP52SJDF8oMRgpGERqgBGOBTSDpr15JmHIBw6BLEqgewhACBwQhzgOB9ByGNQDTmFmmDQTHgwAQwf6UYpjhACC0RhFgorSDvMEiwuysMXFXAAC9ZIIA6EQxQ4YAAWeKERcijiAhOYwQ5UYIhxCAQ0AWDGN+awAeGwAUrB5Oj+QOiVk0MMRB34nAgvzpkRdwQhAFKAhAFiBYpqnCMR6coGBnKiAUOYcCPwOMYnZjGaltgxDQHzxQc0AB0BNeQYLmgGKg1giHQEQEDuCBYCJAKgdEpkFTQTBnREcI1D8qAb7ZiEC6gA0aJk4wxR8BlKCGJHKkDEEznBAFOWkRMUqCkAzYXIbK6Q5oY0QwM88DJBVCeCDQ8kHCK42CpMTRR36CIJAcBCQQCFgHc2BBAGMIZA5BAANphBAxnYAyMfcoGcNCASEqlDAFqAABUcWh65zsK0A9A82PRCBN4cCFAoGpFyFCFxJjAAg9nBDtsuBA+CAEYPnvSCYEAQIWi4AIz+5DGJ0xDkGvUWTjfwsAEEMsccRdJG6AIj7YO84xu8sEUDlVG5Y0CgAheZIyoe5bDWfgYB3C6I6hzQhhHsIZBbKsRoDVDag6wDFV7YZbINgomCVSQdDx5ILjjwpAWkRccIAVRBUDEFEZjB2vIoQgBWEPYtrYMVFvxpNcAAgQ1gSgP9FUg7uBCAZVQkFLwViDu60Al2dGp1Ixi5QYKxgCL8whS4zUlOSKCwG3zsIu5YxznCEY1RNGIW2jiHOhwbkTakIR3wWCcm5mMEb7oJx8QCQwBYz5BzeEAL9uNFD2zECld64ePycEcWNJ+TDighDfgkhDyAcYuJpKMbwYhFJwD+sYUhsMADHrDBEV7AgRT0YA2WoAUzmt2QZVzBDk8YwRLYAAS5ZGOwTPqLBOoOEXYH4AONIBAdoG5vhgCBt16QsAROQAeyUA2/gQ434AMOcQ6GgAakkAt1oAZHwAIkoAC1EhhmUAiaUAp+YQ6rYHpisAMLUAEfIASAIAow5hDEEABG4Bl1UATy0AkBQAYMUQuGMBHKQAKhMAI50QRbgHsRRC4UAQVs0hDMkAEMAANmsAApsAEnAwzX8CTMFwDTYglLo3mLUiE5QUjlkAIIwHALAQ03ICVFsAO7FIMc4QvWZgjHdgZ1hRDWMAF6oFWzBVjLkAGG1xDQkAKGEAJL8Af+AqEOYTYbdqIO4TACUeQIJjAMvCAMt1AIMSAPzjAClOAJhmAAujBBd+AQ4EA+8iA2VyARoQMFEkENbpATICAILWEKSyUPK8ADjAAJBuENR3AKzSAKJ0BCDhGEwZJeAhEOPsNVUCcP75ACIQAFI4BHA3ELCGAGTBAEYdENF7AFHqAEhyER8DBoCWcQogB3s0V4VCMRzEBKAWABWjAG0SUPi6BI8pAOgUgQo0AABmABsGBxB2EMFgAP6bBGzhAMxMB/tRAJkCAI02IpZJAEUKAIYcEOZSADapAFcCERgMBLzdYJq4EQ0YAAu0IRmVABK9NMDWYBSXIOIVAFdwMOYWH+Cf0SEc1gASZAAywwA0BQBEWgBFGABWcQBm3QB4FACIqgCJSgCafgCalgC7SQC8JQDMcADc7QDM5wDd4gDocYEZ6gAyeDiAbhDtFQAjEwbwXhBQGgCRVxDQ6AOgQRB0ooEMRmAi72B3YgEOP4EOygCOJRAkSpB3YgB2iABmfgBVkQBVDwBEZwBD3gAzagAzAAAzGQAiiwAR/AAR0AAhrwgQHgRBDhDugFAYA1EMuQBgVCAFV3EOiwBYYlEd8AAWZpUm5AEGfAQrpRDg7wBhahDYbAADPgcg0BDzbkDu2gDulADuZQDsjZDOCWA7iAfAshBQ5QEOFQBg4ARpYQDRL+YIq/YhHgwH/y0FeBMhS6sACm+AIaEGQUIQ5MtDoIsAAIMAETcAEbMAM04ANCIARLYIRV4AVqsAZ6kAiFwAd70AcPYAGWVhFOQIDsYAlaqAT2JAhNWBRwcAZ+UFABcAcIShDk4ADpeBHVEACkwAqq4AmgsAmSIAmKEAh9EAdu0AZgoAVhwAVSAAVSkARCwANDEAQW8D4YQQfMgAq0ExhvRBAeAFUwwRPU4Aea5wZSAgcTehGfgADxSBGEwAQZAQ+EIJ440ArpwAa0tGZGUIswAQ/aAATNVwuamAIpdRGEEAEagQk3wJ0U4Q0qYIxyWQFDmQ3w0ABtYJZaUQqDFQD+TkAFiYcRXSCNGDELKlBzF6EIWDoQzGACJZBYohBFsWEOhTABxdGmF6GfGhFUd3gRuql4loCpWuEOexB27sB/gCFbGVECYYoR0cAASUcR81al8uANpAISd6oATSAPqbAEBcEMNsAR7wABTYAJj0AKqUALrXALuFAMytAM1WAN3eAN4AAO4RAO4iAO5EAO41AO5XANGcCHRFEmYESmGaEKFIAIylAkXkAAa/AKu9YNy5gR6cCpW9iv/poTBiABDoAAFkABFBAB9wgT7qANuzABqckR2cAAUNUNdrQ6HVAEH7oR2vAADSCttvAKLvABs5AKpbAJk6AIo4UFbXAGaYD+BlvQA9kRBEZQBBUgcXOxBy7lEX2AhPKwC1gQDGPQADmRBKOZEcewABLQHu4ABC1gEHFwQQXRCgGQOwSDpEVxDSEAhxixBAnaGBglEMSgBTfAfhQRC/H5Hz1wAwYRBlCLjwEQZFoQAGpKFN9pCU6gj5KnERDYtQZhDDKgnhkxSBOwXjWgtgWBBW07EJ8wtQOBSp7JEdHAE+igCmUwAyczJC/gYhzhDkqAgwmxCE/gEYbgVP4RDi7AAwZxBQ7Af8CWO1YQAJPgEeIwAaUwBLyTEwyABtCgDqswBP5IEZ6VWAhBA66yGd3Arg7xBlTUDd8QDtTQAjTgDuIwDubgF1b+8ADDwA7E6Q7uYEwf0g5v8CQCxRGmEwAK4AFdQGUDQQ0WYI4ZcQ4ZoCpwJBDpUAYYgDHW8HNDAAi2gLwKwU95AwIpIAI5AQMoQAONmQScygNU4AVbIAZi8ExvoAc9kAKzUAoLMDIdUQoE4Aa0ULSaiAAlxhHBkBMZcASR4AqogAdEiEsDUQgVYA2UMAMLEAFPwGAP4Q5NMAR5sAYM8ABv8AVWcAVJ8CQwYAIrYGwP8CQMMLDQEShEwwsEgEkcoQ1NAMJo1QFjcKsXUQtPzHwGcE0FgQM2sA4t8Q6x8AFu5RDosAOncg4pVhAmgADuqwcMYD8rEAJ3iB2O8LsRkQ7+ltBsWLwR0QAGL5ABHQADWYDDHNQBBhAEiZAL7iB3PvAIuTCqB/ENI0AT4gACk0UQH4AAnnoGCwAu3jADLgCHsaAAjPA1EOENzRANeoUQ16ALkHAEEsBVYPCBIzAFsNpHEzAU4fABQUAQ6sABCGBEYoAA1NAOKAAEWiusBDAIrvwR77AOsrAaZqoI7mW+WWC1AkENDsAk6CAC9jIQIIAANEMGFwANIlADnloQs4Cn1UwUwuAFGFoClmANEeMMHGAN7hAOIOC56EylBZEFCMAALDC/COGgwlvPRPENqoAGDBAAGgAGZ3QMCAAEUqAEARsGEBwGY7AABHAGe5AHBVr+CLsUBeaWEI5gAJQA0UbhDt0ACUBhAD1gDMageQzAAFr4r8zXBC3tDIewB+o7cI4g01uRCBKgQzfQwQNRDRcQAoonDtoQDg+AAHKAAMdaEOhAMBFgkhvAyAKxCASQCkqtFeNACESYNg2mASZgEA6gj00AqGFQAQ0JDVbgAEZnCAiwUWltFNnABDmhAG0QFtGQATNgEEBhBcFUDAaAC7eTBF1QPYJAAGgY2MLpxxVBBUoAFHkjMxWwxgNhAB8QeHMgTwWxCyLQ0n5AAHn5EOtwvDb3Du/A2XKDC1oAQ4JHCkxABEIwtx1xA4TwADeApp6yABJYEBBwzgPTtAVBDBn+4GHykAZQMMhqIbQOo576VmwHGBF1wAIBgAcE0QgQ8ArWgAbA5REbkAMGoAOB0NQ58QGvgAq4oAu4oAwIsAK6igkVALii8AKAKxBVkAXQeRDFAAGR0Ari8dBCIgRGEAXqZRHq8AsBIH0CwQ4G0AaMoQ4WEAEtfREPANSExCdglBPhdBAMYHKKVwHfWBBQgACt2RCiwC6AsQcBAwbE2g7tgNsOcQwBkJH38SYDoSJ8ixEGIAm04AonrAqxwAZf7AGNEAhzIAYGAJbyQA16sAM7kAIE0AfRkA25YAE2kK/ywA5fgADVVxFWgzUvNgEIEAZkbbQBIIzysLjULBBqoCr+VWwAXpMOHkAVAvFfOWEc0xgAbOOgQeAHhIAAd5AEIFACKbAHsywQ62AFHFA5FtEFkQo4OHC5ecARQD6KAlHCippcea4RuxAB6EEOGOCWL4YT0RFEUjwfoWBPDmAL7NAN2eC+AqEDHWB0n0kIBYUBuNQO4SDDT4KqGMEMBhCX71ArXdANsJBEE34RmLABfjEOElBfA8EJSyMDcKcIAbBTAvFc4LleKdAAu1YR2QAKu/QC3JkKBABLGsEMUF01W5ACJODeBvDdE7EH9HgOFyAhBLEJBNAA8VsBD6ZZz7IONsADrNcNPmACmFwRu9TSSbAB0SwRy0AA4ysP8AAO5dD+VJ+3EVpQAsFQEg5wBMdADdpADeFA7jkQDBwQABVgC9GwAHnuDkzAARcvD+OgAjIA8BIRLMFE7LoKhAEwmwahDRXAAR6xNUDNfEujARhAAJGyDmjgABBQ6ZuBAShAthMRCS4AqD1A3hoxDO1mENRAAynQ8RVBAf83B+6GBUzUAEHgAz0AAzIgmcyHC7xAARuANkltENGQAi6A3RAhCVrgC9dQDCIgIO1ABjzAC8yQB/SYEZZgOhwgB4PxDoUgBSSwBnJfEU/CigPhaRtkEAXyJAagAX0ADtFASi+OTSWgA9Q9EXEAnztABafAGO6QCBXwADqAB/FcEeSgDd7Q/P7+AQy64A28ZxHnUCBTwEiAEQTxCChJAA4RAEbqBg4x0GYDkQ0SsAKOCnrhoK1rRFvhYA4+TjLQUCBXADw55RsE8QsOIIGCgABCawEA4W1cjADACPjJhktDgBvyHD6EGFHiRIoVLV7EmFEjRVwBAmRh91BbgCjtHgKbIEUenwaUnE0w4OHYiwDydNHAMMEjC3Qbff4EGlToxE8EKFCBqC4Al4e9FjB55wRBKYe1IARAkaGmvHPaclkIkKLcULJlzZI15JHAhAogQHQIwGAHjx0BmsgrEkDBmDWBAJkIEMGjqVOzfjVC4OBDtrONH7pzHNlhHQU8biyc8ILFihQpPIr+kbeFgQYLDAwQ8NiAwQOPrVt3iCZZ9myyUpw4BBQgjrpx39opCqCmG48Sv5opMxZMU4AFwbQYCPDFF0xFpTw1IEZb+/aMO9w4/BOAzkNQBLBE6wDCW0ReATDI+0aTwrIPCJw5fDCL+/6K38aEi6ydFiBxaJAA4HCIFQTWuAYwXiTSJQAHHCqmgQBeaACB2OQBYZTZouGlm3Me2pA/h9Z5wZfIwPmAlAIDwEOeTxAIZBfBAjhGIlkCCOGhVVpDoBqHQpBkNloCmMAHReTJRgMT5fFGEBiCi8waCaBxSJAADrEkgERmHAKuEh/asQOIJvEIAWoc8oGQ2d7wsplr5Bn+hIBF4HEsJIjaOSeSHFwjALLGlnkgDUEW8SEsAwx5xb1WGAhAFWiyiSabbrzpxL10zuFUnCkCIOARd9IZYg48I9txGIgA84gIU0YsCw1w5GlHGU2aQC0AA2IQYxMLPGxMFNc8MuCRLodFFlkDEGgAugAa+MADB7gwyTF4VLAEol5A4OGC1hgAkKxFYkADB29bQ4OXbxyCpITG3nGjggDkOGaGABT5IoAhXjFlk00oYUQRRwgodA01yEhjCyqq8OgFIi7INQAPzIlMGBEEdcgQUM6B5hQwIBWSrHNca6AMayDABaKRxhzqnTJaCICULi0Rw6MxKEKABYwhQkABWeT+iYYA6CAIQZzIPqnhomssSLmsJgKQgpaH6DAiogCALcudKuDKogFLuhgBhQD8oMgAFdaZSAEEYHHIFNQMWCDcxiw54aJuSGCsrF0Y0AYiZTR8yJcAHDmrnSNoUgARGlz45okA+KCIgBNgjSgCBFh56I64AugmslQCCJkiaGwg5ywSaoEonAB26JsYDgjAmix2dBAhgBZEKEkeHu6dyB2sKIeIAgNQgQiumCNrhgIU3qmIkyj0LKuNMZh3yBpkNwB+qHVSkNcBLx6iIQACJwqgBKMlysAAqh6SIgAEAmgmMoZVaGbn6htY36xhGGBbHnGOCEASNuCRGKjqLOowgQX+CAA9eLAgAJqYiDjKN46JgOCBEMFCmhhgC8eAAywOGEMrjpENa/RCEQaoWmPcwYQF1OAII3AfL6wxDGPIzSzn6AAHJvSYFQSAeBKJRvls+BAVECAUEDFDa6awAmM4BhoW1BUFOLABBwTABOdrDDOu0poiUE8y4KhABur2EHaoIABSk0g2AnACiknkBAHYBES0dBUrhCIDPWmMN3wQMY9k4VSRYQYUXvCCL7RRNtdYgAR8kDoYcjCNASDBEB0ChAAU6SGYAFUXXpAIN3yAgo75RR2wcIVANFE74/hkRYyRSqDoglldgEg3QhAAA0akGuXDIkQSRbiHoOJZZLCGCHT+oQYh2O9J+5lEG7z4k1RIQALfeUg2PoCjiTjDiqx8CBQCYAiIdCQASDFFBKyhhDsc85jNkIB+ggIKByxgfA65hgcCsB6JQCMAIuicRMKwJYg0IwAXsIFD7uCAYnCgFebkTznyYoAcAaURFohAJyDiDK1kzyHD4FHf9BmAQECkHAHYQAoeAoceyEIBr0DodqAhzwDEwAJz+kkdQPCAXkDEGBQgwDIfEowALGYibAiAHSACjwDUAAQPaQcWzhALB9wHI6XgwQfMgLaUYsQXrDEABKuwBKpuBA0jYChEgHEVdUwEGAEYAT0joqUYPWZ1FFAZBzjxCCFYFCLu4INrOFD+1Yt04n0gcIVDvrGAVfwECvay4VUJwJGMTiQ8c4iIAWSwWIgQw4haSINFJIEAMeihBh5hBF975wXUHCF05GCBC37SgryU9SG6YMAOJfI5D1hjIoQIQDkhkgGwSKQWC5gFB+RAkU4YQBcOEYc2dyDaiITjs8+6y0OsgZqfdGAFC9gZLRBwAYq4oqd5i0gjAsCGP8qjBG805iJSYA0HqLOyC9gCRFhhgCVMxBvV2o87wiCMWJRAV3GQBwmCEAxrCMMF5fuJDSBggCbkYRO9aMYoENCjiRxJBGqFSJfUIA93hCMaxxDBVWYVkXY4gQYnuEVzb6CrTDxkFwYIBDF8UQz+ZiijGHHAgl1pAwoKeMQDhRWHZwLAgdZM4ifkOIYsLDGHI7CAA5AKgBGe4AU1DKIRn1hFHgKQgVj8ghawOEUoJNEJhpHgCkE4wQRCEAMiuAF6EPHGIoIREXhEoQjyIoAa8AQc16gtABUAr4kW8c/4yeMXV1EFDA0QCWNuBB7sOIeHhXEKSvzhDF9QAk6c1RoDQMACIBhBCUzgQjY8YhfdIAc61KHTi7QjEu8QhxZ2oosP3IAJPnCBkymAACwhlAs5eIgnWprSc4xDx7NphLNAw9yIvEFF7khiHphtolXUDgF0eDNz3dETdNCEZdMmSyJQSpFu9MAjNJhTOIoBbm/+gBTcZ+lG+Ayg0YmwYwyo8YAlOCAMcAsbKe8eijbwQAAq8MIPTGj0QxghrwAcEdzNQMAZgBKLQyQ8paC4gA9yQaJsS4SniAC4PDrBgp+gIQBuYHVKyx2APeBXHi66SC+AgEeAW+HbFDmGDDySLWaXAopf2JkNVHGRUTQ05BpBhx8WwIbTjFu08DhFNB7hkZ85BB4oMIFrj24WZYRgbd0IgARqOW0AGoBiwBCBARyQ2a2TxR2fCIATTAILK+azd+wob1ng0Q6LA00BASjCJAwwXHjs4B3seGfbNxINKvz5h+EJaEVoMQY+cKLXQiHHLizxhiuEIRO5jEgfPLLviKz+owKKzwg8voGOzfqAGbBYAQ+0YYUAaMEi5sBo3INijEVIoQMuEAMgruARHNC89IBpATbPIQFHor4i4uihlyCSL9QAAiM62QoQtRAIWaQDIu+IwgI8ogX8MsMjIKeIMjzyhoi8ggBtdb5F8HCC/j2kFH8v7EVAdUaJuGMJHsmBO/C+iJA1IAAexzkCi1gDj8gbd3AFDjgCmIo/izCGUCivYRAMesO5ANCmf4MIYQOViqAGvbA7eVCDb7q9FZsBoDkCEsifCbyIvEsF6roITmAAUSAABIiIj3ofGLCIWRo6h2AH6Lg8ipCF99kAA8gDrYPBjfiGbICDAPDBi0CDGSD+B7ioOoewgRHIqzCwCKB6gnOwBkr4uw7og9ChCBtYowdpQqA4hbqgkouIgTaQB3uBJnnYBANohhNsBIs4EgJ4ARlwgjWAAtRYgFioCF1IgT0YizYMimwAqivACAcQBXmogwDAgZAAhwjAhHdIlGWwiJMJAFEIB8hoh1NADR4oHYmAh1sYO0cMCl7ggDmriG4wABXhKQpoIjVYAnZAhx5zOYk4ByM4kIh4mgyQQFiUDXewrYq4hQCgHgkIgFc4En77BubIO4nQAx5ptgtZF2VMKUvIgIcogwA4ggVwE3k4qxvIxoiABQQwgHU7kdoZD3BMqTpIgocQBo/QgYcYtDKCwIhuqAACGJ9sMDcosEeE4oQnyIAN+AWKgQd4VCsuCAAjwwgSCAAQ8AIeqIAeCMKEPCZzOIZeOIVF6DU4sMhviAYLgbmKWAdSMAAM4AJH6AVJAkm+UgeTWAdEgQ4XwJyK8IZAOAbfuMn4Gwda8ANDKsqlZMqmdMqnhMqolMqpFK2AAAA7';
+                }
+ 
+                if (row.jahrgang) {
+                    row.jahrgang = '(' + row.jahrgang + ')';
+                }
+                 
+                 
+                if (row.ehrenmitglied) {
+                    row.ehrenmitglied = 'JA';
+                }
+ 
+                if (row.vorstand) {
+                    row.vorstand = 'JA';
+                }
+ 
+                if (row.schiedsrichter) {
+                    row.schiedsrichter = 'JA';
+                }
+ 
+                if (row.fremdspieler) {
+                    row.fremdspieler = 'JA';
+                }
+ 
+                if (row.aufgestellt) {
+                    row.aufgestellt = 'JA';
+                }
+                 
+            });
+ 
+            dataList.add(results);
+            dataList.sort('nachname', { order: "asc" });
+        }
+ 
+    })();
+ 
+</script>
